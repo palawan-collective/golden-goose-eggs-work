@@ -41,3 +41,6 @@ dist-ssr
 *.backup
 *.backup.zip
 golden-goose-eggs_*.backup*
+
+# TREs import outputs (rollback, conflicts, review, dry-run reports)
+scripts/out/
