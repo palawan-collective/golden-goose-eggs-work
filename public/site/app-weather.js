@@ -683,6 +683,9 @@ function openDest(d, recordHistory = true) {
   const images = buildCarouselImages(d)
     .map((u) => SanvicExplore.safeUrl(u, true))
     .filter(Boolean);
+  // Keep a stable copy: showHeroImage() drops dead URLs from `images`, but the
+  // visible strip must still offer every photo attached to the listing.
+  const stripImages = images.slice();
   photo.classList.remove("has-carousel");
   photo.onclick = null;
   photo.removeAttribute("tabindex");
@@ -735,6 +738,30 @@ function openDest(d, recordHistory = true) {
       }
     };
   };
+  const strip = document.getElementById("dePhotoStrip");
+  if (strip) {
+    strip.replaceChildren();
+    strip.hidden = stripImages.length <= 1;
+    stripImages.forEach((url, i) => {
+      const thumb = document.createElement("button");
+      thumb.type = "button";
+      thumb.className = "dest-photo-thumb";
+      thumb.setAttribute("aria-label", `View photo ${i + 1} of ${stripImages.length} of ${d.name}`);
+      const im = document.createElement("img");
+      im.src = url;
+      im.alt = "";
+      im.loading = "lazy";
+      thumb.appendChild(im);
+      thumb.onclick = () => openCarousel(stripImages, i);
+      strip.appendChild(thumb);
+    });
+    if (stripImages.length > 1) {
+      const count = document.createElement("span");
+      count.className = "dest-photo-count";
+      count.textContent = `${stripImages.length} photos · tap to view`;
+      strip.appendChild(count);
+    }
+  }
   const showHeroImage = () => {
     if (!images[0] || media.querySelector("img")) return;
     const img = document.createElement("img");
@@ -825,7 +852,8 @@ function openDest(d, recordHistory = true) {
     : `<div class="dest-exp-stat"><strong>Hours</strong><span>Not listed — call the branch</span></div>`;
   const desc = document.getElementById("deDesc");
   desc.textContent = d.description || "More details will be added by the local team.";
-  desc.classList.add("collapsed");
+  // Short write-ups deserve to be read in full; only long ones get clamped.
+  desc.classList.toggle("collapsed", (d.description || "").length > 240);
   const readMore = document.getElementById("deReadMore");
   readMore.textContent = "Read more";
   readMore.style.display = "";
