@@ -1804,9 +1804,21 @@ let userLocationMarker = null,
 
 function mapNotice(message) {
   const el = document.getElementById("mapStatus");
-  el.textContent = message;
+  if (!el) return;
+  el.textContent = "";
   el.hidden = !message;
+  if (!message) return;
+  el.append(document.createTextNode(message));
+  const dismiss = document.createElement("button");
+  dismiss.type = "button";
+  dismiss.className = "map-status-close";
+  dismiss.setAttribute("aria-label", "Dismiss message");
+  dismiss.textContent = "×";
+  dismiss.onclick = () => mapNotice("");
+  el.append(dismiss);
 }
+let locateAwaitingPermission = false;
+let lastLocateNearby = false;
 function locateUser(nearby = false) {
   if (!navigator.geolocation) {
     mapNotice("Location is not available on this device. Search by barangay instead.");
@@ -1829,6 +1841,7 @@ function locateUser(nearby = false) {
       btn.disabled = false;
       btn.classList.remove("locating");
       btn.setAttribute("aria-busy", "false");
+      locateAwaitingPermission = false;
       const { latitude: lat, longitude: lng, accuracy } = pos.coords;
       if (lat < 6.5 || lat > 12.9 || lng < 116.6 || lng > 121) {
         mapNotice("You are outside Palawan. Choose a barangay to explore San Vicente.");
@@ -1873,6 +1886,12 @@ function locateUser(nearby = false) {
       btn.disabled = false;
       btn.classList.remove("locating");
       btn.setAttribute("aria-busy", "false");
+      if (err.code === 1) {
+        // Permission is changed in Settings, outside this page: remember the
+        // request so returning to the tab can retry it automatically.
+        lastLocateNearby = !!nearby;
+        locateAwaitingPermission = true;
+      }
       mapNotice(
         err.code === 1
           ? "Location permission is off. Enable it in your browser, or search by barangay."
@@ -1881,6 +1900,25 @@ function locateUser(nearby = false) {
     },
     { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
   );
+}
+function retryLocateAfterPermissionChange() {
+  if (!locateAwaitingPermission) return;
+  locateAwaitingPermission = false;
+  mapNotice("");
+  locateUser(lastLocateNearby);
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) retryLocateAfterPermissionChange();
+});
+window.addEventListener("pageshow", retryLocateAfterPermissionChange);
+if (navigator.permissions && navigator.permissions.query) {
+  try {
+    navigator.permissions.query({ name: "geolocation" }).then((status) => {
+      status.onchange = () => {
+        if (status.state === "granted") retryLocateAfterPermissionChange();
+      };
+    }).catch(() => {});
+  } catch (_) {}
 }
 function reducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;

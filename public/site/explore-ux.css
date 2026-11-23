@@ -636,6 +636,27 @@
   color: #dceae8;
   font-size: 13px;
   line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.map-status[hidden] {
+  display: none;
+}
+.map-status-close {
+  flex: none;
+  margin: -2px -4px -2px 0;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: #9fb8b6;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.map-status-close:hover {
+  color: #fff;
 }
 /* The partner's middle way: the pins had shrunk to an 8px dot with a whisper of a
    glow ("I can barely see the sand colour for a beach"). They are back up to a
