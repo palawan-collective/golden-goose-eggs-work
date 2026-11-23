@@ -190,8 +190,8 @@ test("landing and Explore filters never mix barangay and place dots", () => {
   assert.match(mapApp, /mode === "landing" && zoom <= map\.getMinZoom\(\)/);
   assert.match(mapApp, /mode === "landing" && map\.getZoom\(\) > map\.getMinZoom\(\)/);
   assert.match(mapApp, /mapMarkerMode\(\) !== "pick"/);
-  assert.match(mapApp, /marker\.openTooltip\(\)/);
-  assert.match(mapApp, /map\.once\("moveend", \(\) => marker\.openTooltip\(\)\)/);
+  assert.match(mapApp, /marker\.openPopup\(\)/);
+  assert.match(mapApp, /map\.once\("moveend", \(\) => marker\.openPopup\(\)\)/);
 });
 
 test("legacy Discover categories write the canonical Explore state", () => {
