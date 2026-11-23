@@ -2170,14 +2170,20 @@ function buildBarangayMarkers() {
       offset: [0, -9],
       className: "barangay-point-tooltip",
     });
+    // A tap has to identify the dot. A tooltip is a hover affordance: it is
+    // hidden by the far-zoom CSS and closed by the fly-to animation, so most
+    // dots showed no name until a second tap. A popup survives both.
+    marker.bindPopup(name, {
+      className: "barangay-point-popup",
+      closeButton: false,
+      autoPan: false,
+      offset: [0, -6],
+    });
     marker.on("click", () => {
-      // A tap has to identify the dot as well as navigate to it. On touch
-      // devices the normal hover tooltip never fires, so explicitly reveal the
-      // barangay name before and after the map settles.
-      marker.openTooltip();
+      marker.openPopup();
       const bounds = L.geoJSON(feature).getBounds();
       if (bounds.isValid()) {
-        map.once("moveend", () => marker.openTooltip());
+        map.once("moveend", () => marker.openPopup());
         map.flyToBounds(bounds, { padding: [80, 80], maxZoom: 13, duration: 0.7 });
       }
     });
