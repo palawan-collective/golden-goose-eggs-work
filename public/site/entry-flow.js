@@ -383,7 +383,17 @@
       return;
     }
     const hold = Number(window.SANVIC_SPLASH_HOLD || 2000);
-    setTimeout(openWhenReady, hold);
+    // The editorial welcome page opens at hold+180. Wait for it to be dismissed
+    // before the questions appear, so the two never stack on top of each other.
+    setTimeout(function () {
+      if (window.SANVIC_WELCOME_OPEN) {
+        window.addEventListener("sanvic:welcome-closed", function () {
+          setTimeout(openWhenReady, 260);
+        }, { once: true });
+      } else {
+        openWhenReady();
+      }
+    }, hold + 420);
   }
 
   if (document.readyState === "complete") init();

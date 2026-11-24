@@ -133,6 +133,7 @@
     document.body.classList.remove("sanvic-welcome-open");
     if (!isPreview) window.SANVIC_WELCOME_OPEN = false;
     isPreview = false;
+    try { window.dispatchEvent(new Event("sanvic:welcome-closed")); } catch (_) {}
   }
 
   window.SanvicWelcomePage = {
