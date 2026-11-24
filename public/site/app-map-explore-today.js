@@ -2447,6 +2447,7 @@ function openTodaySheet() {
   if (page) page.scrollTop = 0;
   try {
     refreshPanelOpen();
+    if (typeof window.refreshTodaySnapshot === "function") window.refreshTodaySnapshot();
     renderTodayContent();
     updateTodayGreeting();
   } catch (error) {
@@ -2455,6 +2456,13 @@ function openTodaySheet() {
     if (host) host.innerHTML = '<div class="today-card"><p class="today-lede">Today could not load right now. Please close and try again.</p></div>';
   }
 }
+if (typeof window !== "undefined") {
+  window.addEventListener("sanvic:today-snapshot", function () {
+    const panel = document.getElementById("todayPanel");
+    if (panel && panel.classList.contains("open")) renderTodayContent();
+  });
+}
+
 // Today is a full-screen panel now, not a 3-snap bottom sheet, so "toggle",
 // "snap" and "collapse" all just resolve to open or close. Kept as named
 // aliases because other code and the mobile test harness still call them.
@@ -3680,6 +3688,7 @@ function renderTodayContent() {
   const scroller = page || host;
   const keepScroll = scroller.scrollTop;
   const d = TODAY_DATA;
+  const snapData = (typeof window !== "undefined" && window.SANVIC_TODAY_SNAPSHOT) || d.snapshot;
   // Counts must come from the live data: the hardcoded TODAY_DATA.snapshot
   // numbers went stale the moment tribes/events moved into the database
   // ("3 Tribes forming" while seven were live).
@@ -3693,10 +3702,10 @@ function renderTodayContent() {
       <div class="today-kicker">Daily snapshot</div>
       <div class="today-title">San Vicente, right now</div>
       <div class="today-snap-grid">
-        <div class="today-snap"><span class="tsn-glyph">${iconOrText(d.snapshot.weather.icon, 20)}</span><span class="tsn-val">${escT(d.snapshot.weather.temp)}</span><span class="tsn-lbl">${escT(d.snapshot.weather.label)}</span></div>
-        <div class="today-snap"><span class="tsn-glyph">${lucideSvg("waves", 20)}</span><span class="tsn-val">${escT(d.snapshot.sea)}</span><span class="tsn-lbl">Sea</span></div>
-        <div class="today-snap"><span class="tsn-glyph">${lucideSvg("sunset", 20)}</span><span class="tsn-val">${escT(d.snapshot.sunset)}</span><span class="tsn-lbl">Sunset</span></div>
-        <div class="today-snap"><span class="tsn-glyph">${iconOrText(d.snapshot.moon.glyph, 20)}</span><span class="tsn-val">${escT(d.snapshot.moon.label)}</span><span class="tsn-lbl">Moon</span></div>
+        <div class="today-snap"><span class="tsn-glyph">${iconOrText(snapData.weather.icon, 20)}</span><span class="tsn-val">${escT(snapData.weather.temp)}</span><span class="tsn-lbl">${escT(snapData.weather.label)}</span></div>
+        <div class="today-snap"><span class="tsn-glyph">${lucideSvg("waves", 20)}</span><span class="tsn-val">${escT(snapData.sea)}</span><span class="tsn-lbl">Sea</span></div>
+        <div class="today-snap"><span class="tsn-glyph">${lucideSvg("sunset", 20)}</span><span class="tsn-val">${escT(snapData.sunset)}</span><span class="tsn-lbl">Sunset</span></div>
+        <div class="today-snap"><span class="tsn-glyph">${iconOrText(snapData.moon.glyph, 20)}</span><span class="tsn-val">${escT(snapData.moon.label)}</span><span class="tsn-lbl">Moon</span></div>
         <div class="today-snap"><span class="tsn-glyph">${lucideSvg("users", 20)}</span><span class="tsn-val">${tribeCount}</span><span class="tsn-lbl">Tribes</span></div>
         <div class="today-snap"><span class="tsn-glyph">${lucideSvg("sparkles", 20)}</span><span class="tsn-val">${happenCount}</span><span class="tsn-lbl">Happening</span></div>
       </div>

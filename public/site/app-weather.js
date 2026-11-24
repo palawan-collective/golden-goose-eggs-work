@@ -108,6 +108,104 @@ function setWeatherCache(payload) {
   }
 }
 
+// ─── TODAY SNAPSHOT — real data for the four quiet cards ────────────────
+// Weather + sunset come from Open-Meteo (already used by the hero), sea state
+// from Open-Meteo Marine, moon phase from a synodic-month calculation. No key,
+// no account. Cached for 10 minutes; failures leave the honest "—" state.
+const TODAY_SNAPSHOT_CACHE_KEY = "sanvic_today_snapshot_v1";
+const TODAY_SNAPSHOT_CACHE_MS = 10 * 60 * 1000;
+
+function seaStateFromWaveHeight(metres) {
+  if (metres == null || !Number.isFinite(metres)) return "—";
+  if (metres < 0.5) return "Calm";
+  if (metres < 1.2) return "Light swell";
+  if (metres < 2.5) return "Moderate swell";
+  return "Rough seas";
+}
+
+function moonPhaseName(when) {
+  const synodic = 29.530588853;
+  const knownNewMoon = Date.UTC(2000, 0, 6, 18, 14);
+  const days = (when.getTime() - knownNewMoon) / 86400000;
+  const phase = (((days % synodic) + synodic) % synodic) / synodic;
+  const names = [
+    "New moon", "Waxing crescent", "First quarter", "Waxing gibbous",
+    "Full moon", "Waning gibbous", "Last quarter", "Waning crescent",
+  ];
+  return names[Math.round(phase * 8) % 8];
+}
+
+function readTodaySnapshotCache() {
+  try {
+    const raw = localStorage.getItem(TODAY_SNAPSHOT_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed.fetchedAt || Date.now() - parsed.fetchedAt > TODAY_SNAPSHOT_CACHE_MS) return null;
+    return parsed;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeTodaySnapshotCache(payload) {
+  try {
+    localStorage.setItem(TODAY_SNAPSHOT_CACHE_KEY, JSON.stringify(payload));
+  } catch (_) {}
+}
+
+if (typeof window !== "undefined") window.SANVIC_TODAY_SNAPSHOT = readTodaySnapshotCache();
+
+async function refreshTodaySnapshot() {
+  const cached = readTodaySnapshotCache();
+  if (cached) {
+    window.SANVIC_TODAY_SNAPSHOT = cached;
+    try { window.dispatchEvent(new Event("sanvic:today-snapshot")); } catch (_) {}
+    return cached;
+  }
+  try {
+    const forecastUrl =
+      `https://api.open-meteo.com/v1/forecast?latitude=${SANVIC_LAT}&longitude=${SANVIC_LNG}` +
+      `&current=temperature_2m,weather_code,wind_speed_10m&daily=sunset&timezone=Asia%2FManila`;
+    const marineUrl =
+      `https://marine-api.open-meteo.com/v1/marine?latitude=${SANVIC_LAT}&longitude=${SANVIC_LNG}` +
+      `&current=wave_height&timezone=Asia%2FManila`;
+    const [forecastResponse, marineResponse] = await Promise.all([
+      fetch(forecastUrl),
+      fetch(marineUrl).catch(() => null),
+    ]);
+    if (!forecastResponse.ok) throw new Error("Forecast unavailable");
+    const forecast = await forecastResponse.json();
+    const current = forecast.current || {};
+    if (current.temperature_2m == null || current.weather_code == null) {
+      throw new Error("Unexpected forecast shape");
+    }
+    const { label, icon } = weatherCodeToDisplay(current.weather_code);
+    const sunsetIso = forecast.daily && forecast.daily.sunset && forecast.daily.sunset[0];
+    const sunset = sunsetIso
+      ? new Date(sunsetIso).toLocaleTimeString("en-PH", {
+          hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Manila",
+        })
+      : "—";
+    const wave = marineResponse && marineResponse.ok
+      ? (await marineResponse.json()).current?.wave_height
+      : null;
+    const payload = {
+      weather: { icon, temp: `${Math.round(current.temperature_2m)}°C`, label },
+      sea: seaStateFromWaveHeight(wave),
+      sunset,
+      moon: { glyph: "moon", label: moonPhaseName(new Date()) },
+      fetchedAt: Date.now(),
+    };
+    writeTodaySnapshotCache(payload);
+    window.SANVIC_TODAY_SNAPSHOT = payload;
+    try { window.dispatchEvent(new Event("sanvic:today-snapshot")); } catch (_) {}
+    return payload;
+  } catch (err) {
+    console.warn("[SANVIC] Today snapshot unavailable:", err);
+    return null;
+  }
+}
+
 function renderHeroWeather(payload) {
   const widget = document.getElementById("heroWeather");
   if (!widget) return;
@@ -1730,6 +1828,7 @@ window.addEventListener("load", () => {
   setTimeout(loadVoices, 800);
   initAuth();
   initHeroWeather();
+  refreshTodaySnapshot();
 
   // Show dock & orb after splash (kept in sync with the 5s splash hold)
   setTimeout(() => {
