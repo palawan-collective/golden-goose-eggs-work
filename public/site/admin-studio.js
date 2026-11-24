@@ -419,7 +419,7 @@
       <div class="admin-field"><label>Title</label><input data-si="${si}" data-field="title" value="${esc(s.title || "")}"></div>
       <div class="admin-field"><label>Subtitle</label><input data-si="${si}" data-field="subtitle" value="${esc(s.subtitle || "")}"></div>
       <div class="admin-field"><label>Note / field help</label><input data-si="${si}" data-field="note" value="${esc(s.note || "")}"></div>
-      ${multi ? `<div class="admin-field"><label>Minimum choices</label><input type="number" min="1" data-si="${si}" data-field="min" value="${esc(s.min || 1)}"></div><div class="admin-field"><label>Maximum choices</label><input type="number" min="1" data-si="${si}" data-field="max" value="${esc(s.max || 4)}"></div>` : ""}
+      ${multi ? `<p class="admin-hint">Profiling is fixed: visitors must choose exactly 4 answers. You can still edit the wording and the answers.</p>` : ""}
       ${si === stepsLength() - 1 ? `<div class="admin-field"><label>Final button label</label><input data-si="${si}" data-field="buttonLabel" value="${esc(s.buttonLabel || "")}"></div>` : ""}
       <div class="admin-field"><label>Skip label</label><input data-si="${si}" data-field="skipLabel" value="${esc(s.skipLabel || "")}"></div>`;
   }

@@ -6,6 +6,8 @@
   const KEY = "sanvic_entry_v1";
   const CONFIG_KEY = "entry_flow_v2";
   const VERSION = 3;
+  // Locked by the partners: profiling needs exactly four selections.
+  const MULTI_REQUIRED = 4;
 
   const DEFAULT_CONFIG = {
     enabled: true,
@@ -27,9 +29,9 @@
         id: "feels",
         type: "multi",
         eyebrow: "WELCOME TO SAN VICENTE",
-        title: "What feels right today?",
-        subtitle: "Choose one or more. There is no wrong kind of day.",
-        min: 1,
+        title: "Where do you see yourself tomorrow at 3pm?",
+        subtitle: "Pick four little moments. There’s no wrong kind of day.",
+        min: 4,
         max: 4,
         options: [
           { id: "island", label: "Island hopping", note: "A day on the water.", value: "island", tags: ["island", "social", "pulse"], icon: "sailboat", nextAction: "discover:islands" },
@@ -223,7 +225,7 @@
     }).join("");
     const count = (state.answers.feels || []).length;
     const countLine = s.type === "multi"
-      ? `<div class="entry-count" aria-live="polite">${count} selected · ${count >= (s.min || 1) ? "ready to continue" : "choose at least " + (s.min || 1)}</div>`
+      ? `<div class="entry-count" aria-live="polite">${count}/${MULTI_REQUIRED} chosen · ${count === MULTI_REQUIRED ? "ready to continue" : "choose " + (MULTI_REQUIRED - count) + " more"}</div>`
       : "";
     const submitLabel = isLast ? (s.buttonLabel || "Show me San Vicente") : "Continue";
     w.innerHTML = `
@@ -234,7 +236,7 @@
         <h1 class="entry-title" id="entryTitle">${esc(s.title)}</h1>
         ${s.subtitle ? `<p class="entry-sub">${esc(s.subtitle)}</p>` : ""}
         ${nameBlock}
-        <fieldset style="border:0;padding:0;margin:0"><legend class="entry-label" style="margin-bottom:8px">${s.type === "identity" ? "Choose one" : s.type === "multi" ? "Choose one or more" : "Choose one"}</legend><div class="entry-options">${choices}</div></fieldset>
+        <fieldset style="border:0;padding:0;margin:0"><legend class="entry-label" style="margin-bottom:8px">${s.type === "identity" ? "CHOOSE ONE" : s.type === "multi" ? "CHOOSE 4" : "CHOOSE ONE"}</legend><div class="entry-options">${choices}</div></fieldset>
         ${countLine}
         <div class="entry-footer"><button type="button" class="entry-skip" id="entrySkip">${esc(s.skipLabel || "Skip for now")}</button><button type="submit" class="entry-next" id="entryNext">${esc(submitLabel)}</button></div>
       </form>`;
@@ -257,6 +259,12 @@
         else if (s.type === "single") state.answers.beginValue = value;
         else {
           const arr = state.answers.feels || [];
+          if (el.checked && arr.length >= MULTI_REQUIRED && !arr.includes(value)) {
+            el.checked = false;
+            const counter = document.querySelector(".entry-count");
+            if (counter) counter.textContent = "Choose 4 — deselect one first.";
+            return;
+          }
           if (el.checked && !arr.includes(value)) arr.push(value);
           if (!el.checked) state.answers.feels = arr.filter((v) => v !== value);
           state.answers.feels = arr;
@@ -284,9 +292,9 @@
           if (first) state.answers.identityValue = first.value;
         }
       }
-      if (s.type === "multi" && (state.answers.feels || []).length < (s.min || 1)) {
+      if (s.type === "multi" && (state.answers.feels || []).length !== MULTI_REQUIRED) {
         const err = document.querySelector(".entry-count");
-        if (err) err.textContent = "Please choose at least " + (s.min || 1) + ".";
+        if (err) err.textContent = "Please choose exactly " + MULTI_REQUIRED + ".";
         if (btn) btn.disabled = false;
         return;
       }
