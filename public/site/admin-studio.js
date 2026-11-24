@@ -27,6 +27,7 @@
     map: "Map & pins",
     photos: "Photos",
     categories: "Categories",
+    entry: "Onboarding",
     site: "Site content",
     tribes: "Tribes",
     events: "Events",
@@ -304,6 +305,9 @@
       categories: function () {
         adminRenderCategories();
       },
+      entry: function () {
+        adminRenderEntry();
+      },
       site: "renderAdminSite",
       tala: "renderAdminTala",
       ai: "renderAdminTalaAi",
@@ -372,6 +376,174 @@
     }
   });
 
+  /* ───────────────────────── ONBOARDING ───────────────────────── */
+
+  var entryDraft = null;
+
+  function entryDefaults() {
+    try {
+      return JSON.parse(JSON.stringify(window.SANVIC_ENTRY_DEFAULTS || { enabled: true, steps: [] }));
+    } catch (_) {
+      return { enabled: true, steps: [] };
+    }
+  }
+
+  function adminRenderEntry() {
+    adminLoadEntryConfig();
+  }
+
+  async function adminLoadEntryConfig() {
+    entryDraft = entryDefaults();
+    try {
+      var r = await sb
+        .from("site_settings")
+        .select("value")
+        .eq("key", "entry_flow_v2")
+        .maybeSingle();
+      if (!r.error && r.data && r.data.value) {
+        var parsed = typeof r.data.value === "string" ? JSON.parse(r.data.value) : r.data.value;
+        if (parsed && Array.isArray(parsed.steps)) {
+          entryDraft = { enabled: parsed.enabled !== false, steps: parsed.steps };
+        }
+      }
+    } catch (_) {}
+    adminPaintEntry();
+  }
+
+  function entryStepFields(s, si) {
+    var multi = s.type === "multi";
+    return `
+      <div class="admin-field"><label>Step ${si + 1} id</label><input data-si="${si}" data-field="id" value="${esc(s.id || "")}"></div>
+      <div class="admin-field"><label>Type</label><select data-si="${si}" data-field="type"><option value="identity"${s.type === "identity" ? " selected" : ""}>Name + visitor/local</option><option value="multi"${multi ? " selected" : ""}>Multiple choice</option><option value="single"${s.type === "single" ? " selected" : ""}>Single choice</option></select></div>
+      <div class="admin-field"><label>Eyebrow</label><input data-si="${si}" data-field="eyebrow" value="${esc(s.eyebrow || "")}"></div>
+      <div class="admin-field"><label>Title</label><input data-si="${si}" data-field="title" value="${esc(s.title || "")}"></div>
+      <div class="admin-field"><label>Subtitle</label><input data-si="${si}" data-field="subtitle" value="${esc(s.subtitle || "")}"></div>
+      <div class="admin-field"><label>Note / field help</label><input data-si="${si}" data-field="note" value="${esc(s.note || "")}"></div>
+      ${multi ? `<div class="admin-field"><label>Minimum choices</label><input type="number" min="1" data-si="${si}" data-field="min" value="${esc(s.min || 1)}"></div><div class="admin-field"><label>Maximum choices</label><input type="number" min="1" data-si="${si}" data-field="max" value="${esc(s.max || 4)}"></div>` : ""}
+      ${si === stepsLength() - 1 ? `<div class="admin-field"><label>Final button label</label><input data-si="${si}" data-field="buttonLabel" value="${esc(s.buttonLabel || "")}"></div>` : ""}
+      <div class="admin-field"><label>Skip label</label><input data-si="${si}" data-field="skipLabel" value="${esc(s.skipLabel || "")}"></div>`;
+  }
+
+  function stepsLength() {
+    return entryDraft && Array.isArray(entryDraft.steps) ? entryDraft.steps.length : 0;
+  }
+
+  function adminPaintEntry() {
+    var body = document.getElementById("adminBody");
+    if (!body || !entryDraft) return;
+    var cards = entryDraft.steps.map(function (s, si) {
+      var options = (s.options || []).map(function (o, oi) {
+        return `<div class="admin-section-card admin-form-section-card" style="margin:8px 0;padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><strong style="font-size:.8rem">Answer ${oi + 1}</strong><button type="button" class="admin-row-x" data-del-opt="${si}:${oi}" aria-label="Delete answer">${icon("trash-2", 13)}</button></div>
+          <div class="admin-field"><label>Label</label><input data-si="${si}" data-oi="${oi}" data-optfield="label" value="${esc(o.label || "")}"></div>
+          <div class="admin-field"><label>Note</label><input data-si="${si}" data-oi="${oi}" data-optfield="note" value="${esc(o.note || "")}"></div>
+          <div class="admin-field"><label>Value</label><input data-si="${si}" data-oi="${oi}" data-optfield="value" value="${esc(o.value || o.id || "")}"></div>
+          <div class="admin-field"><label>Tags (comma separated)</label><input data-si="${si}" data-oi="${oi}" data-optfield="tags" value="${esc((o.tags || []).join(", "))}"></div>
+          <div class="admin-field"><label>Icon (Lucide name)</label><input data-si="${si}" data-oi="${oi}" data-optfield="icon" value="${esc(o.icon || "")}"></div>
+          <div class="admin-field"><label>Next action</label><input data-si="${si}" data-oi="${oi}" data-optfield="nextAction" value="${esc(o.nextAction || "")}" placeholder="discover:food, pulse, map, hunt"></div>
+        </div>`;
+      }).join("");
+      return `<section class="admin-section-card admin-form-section-card" style="margin-bottom:12px">
+        <details ${si === 0 ? "open" : ""}>
+          <summary style="cursor:pointer;padding:14px;font-weight:600">Step ${si + 1}: ${esc(s.title || "Untitled step")}</summary>
+          <div class="admin-section-body" style="padding:0 14px 14px">
+            <button type="button" class="admin-row-x" data-del-step="${si}" aria-label="Delete step" style="margin:6px 0 8px">${icon("trash-2", 13)} Delete step</button>
+            ${entryStepFields(s, si)}
+            <div style="margin-top:10px;font-weight:600;font-size:.82rem">Answers</div>
+            ${options}
+            <button type="button" class="admin-add-btn" data-add-opt="${si}">+ Add answer</button>
+          </div>
+        </details>
+      </section>`;
+    }).join("");
+    body.innerHTML = `
+      <section class="admin-section-card">
+        <div class="admin-section-head"><div><h2>First-visit onboarding</h2><p class="admin-section-desc">New visitors see these steps once. Answers set the visitor name on this device and choose what opens next. No login, email or account.</p></div></div>
+        <div class="admin-section-body">
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><input type="checkbox" id="entryEnabled" ${entryDraft.enabled ? "checked" : ""}> Show onboarding to new visitors</label>
+          ${cards || '<p class="admin-notice">No steps yet. Add one below.</p>'}
+          <button type="button" class="admin-add-btn" id="entryAddStep">+ Add step</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+            <button type="button" class="admin-save-btn" id="entrySave">Save onboarding</button>
+            <button type="button" class="admin-save-btn" id="entryReset">Restore defaults</button>
+          </div>
+          <p class="admin-hint">Next actions: <code>discover:food</code>, <code>discover:beaches</code>, <code>discover:islands</code>, <code>pulse</code>, <code>map</code>, <code>hunt</code>, <code>journey</code>.</p>
+        </div>
+      </section>`;
+
+    document.getElementById("entryEnabled").onchange = function (e) { entryDraft.enabled = e.target.checked; };
+    document.querySelectorAll("#adminBody [data-field]").forEach(function (el) {
+      el.oninput = function () {
+        var si = Number(el.dataset.si), f = el.dataset.field;
+        var v = el.type === "number" ? parseInt(el.value, 10) || 1 : el.value;
+        if (entryDraft.steps[si]) entryDraft.steps[si][f] = v;
+      };
+      el.onchange = function () {
+        var si = Number(el.dataset.si), f = el.dataset.field;
+        if (f === "type" && entryDraft.steps[si]) { entryDraft.steps[si].type = el.value; adminPaintEntry(); }
+      };
+    });
+    document.querySelectorAll("#adminBody [data-optfield]").forEach(function (el) {
+      el.oninput = function () {
+        var si = Number(el.dataset.si), oi = Number(el.dataset.oi), f = el.dataset.optfield;
+        var o = entryDraft.steps[si] && entryDraft.steps[si].options[oi];
+        if (!o) return;
+        if (f === "tags") o.tags = el.value.split(",").map(function (x) { return x.trim(); }).filter(Boolean);
+        else o[f] = el.value;
+      };
+    });
+    document.querySelectorAll("#adminBody [data-add-opt]").forEach(function (b) {
+      b.onclick = function () {
+        var si = Number(b.dataset.addOpt);
+        entryDraft.steps[si].options = entryDraft.steps[si].options || [];
+        entryDraft.steps[si].options.push({ id: "option" + (entryDraft.steps[si].options.length + 1), label: "New answer", note: "", value: "option" + (entryDraft.steps[si].options.length + 1), tags: [], icon: "sparkles", nextAction: "discover:all" });
+        adminPaintEntry();
+      };
+    });
+    document.querySelectorAll("#adminBody [data-del-opt]").forEach(function (b) {
+      b.onclick = function () {
+        var parts = b.dataset.delOpt.split(":");
+        entryDraft.steps[Number(parts[0])].options.splice(Number(parts[1]), 1);
+        adminPaintEntry();
+      };
+    });
+    document.querySelectorAll("#adminBody [data-del-step]").forEach(function (b) {
+      b.onclick = function () {
+        if (!window.confirm("Delete this onboarding step?")) return;
+        entryDraft.steps.splice(Number(b.dataset.delStep), 1);
+        adminPaintEntry();
+      };
+    });
+    document.getElementById("entryAddStep").onclick = function () {
+      entryDraft.steps.push({ id: "step" + (entryDraft.steps.length + 1), type: "single", eyebrow: "WELCOME TO SAN VICENTE", title: "New question", subtitle: "", note: "", buttonLabel: "Continue", skipLabel: "Skip for now", options: [] });
+      adminPaintEntry();
+    };
+    document.getElementById("entrySave").onclick = adminSaveEntryConfig;
+    document.getElementById("entryReset").onclick = function () {
+      if (!window.confirm("Restore the default onboarding questions and answers?")) return;
+      entryDraft = entryDefaults();
+      adminPaintEntry();
+    };
+  }
+
+  async function adminSaveEntryConfig() {
+    if (!window.adminRequireWrite()) return;
+    var btn = document.getElementById("entrySave");
+    if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+    try {
+      var r = await sb.from("site_settings").upsert({ key: "entry_flow_v2", value: JSON.stringify(entryDraft) });
+      if (r.error) throw r.error;
+      recordActivity("onboarding saved", entryDraft.steps.length + " steps", null);
+      live("Onboarding saved.");
+      window.alert("Onboarding saved. New visitors will see it on their next visit.");
+    } catch (e) {
+      live("Could not save onboarding.");
+      window.alert("Could not save onboarding: " + (e && e.message ? e.message : e));
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "Save onboarding"; }
+    }
+  }
+
   /* ───────────────────────── ADMIN HOME ───────────────────────── */
 
   var studioSections = [
@@ -387,6 +559,7 @@
       label: "Categories",
       help: "Manage category labels, colours and marker icons",
     },
+    { tab: "entry", label: "Onboarding", help: "First-visit questions, answers and next actions" },
     { tab: "site", label: "Site content", help: "Hero title, subtitle and loading-screen text" },
     { tab: "tribes", label: "Tribes", help: "Groups and live plans shown in Pulse" },
     { tab: "events", label: "Events", help: "Local happenings shown in Pulse" },

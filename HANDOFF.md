@@ -61,8 +61,10 @@ passcode page any more.
 
 ## 4. What is not done (launch checklist)
 
-- ⬜ **Turn on first-visit onboarding** — `ENTRY_QUESTIONS_ON = false` in
-  `public/site/entry-flow.js`. That is the only switch.
+- ✅ **First-visit onboarding is on and admin-editable** — questions, answers and
+  next actions live in `site_settings` key `entry_flow_v2`; edit them in the
+  Backoffice → Site & community → Onboarding. No login, email or account: the
+  entered name is saved on the device as the visitor identity.
 - ⬜ **Re-upload media** — image and video binaries were never migrated; a
   database dump restores the rows that reference them, never the files.
 - ⬜ **Screenshots** — `docs/screenshots/` only has its README; the four views

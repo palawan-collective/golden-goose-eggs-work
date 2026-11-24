@@ -154,7 +154,7 @@ golden-goose-eggs-work/
 │   ├── admin-studio.js   2,979 ln  # Backoffice UI (overrides openAdminPanel)
 │   ├── admin-model.js      447 ln  # Backoffice rules: publishing, validation (unit-tested)
 │   ├── kmz-import.js       500 ln  # KMZ/KML upload + preview (points only, folder→category/barangay, in-file dups)
-│   ├── entry-flow.js       235 ln  # first-visit questions (OFF — see §8)
+│   ├── entry-flow.js             # first-visit onboarding (native dialog, admin-editable)
 │   ├── personalize.js      129 ln  # locale, units, preferences
 │   ├── explore-model.js    258 ln  # Explore filtering/sorting (unit-tested, pure)
 │   ├── pulse-demo-content.js 73 ln # Pulse seed content
@@ -275,7 +275,7 @@ Clearing browser data resets that person. There is nothing to recover, by design
 | Search                          | `#searchInput`                                                                             | `app-map-explore-today.js`                                                                                                                                                                                                             |
 | Tala (assistant)                | Tala sheet                                                                                 | `app-map-explore-today.js` (keyword replies) + `/api/tala-chat` (AI, optional)                                                                                                                                                         |
 | Backoffice                      | `#adminPanelOverlay`                                                                       | `admin-studio.js` + `app-backoffice.js` + `app-pulse-admin-my-sanvic-hunt.js` (moderation)                                                                                                                                             |
-| Entry questions                 | `#sanvicEntry`                                                                             | `entry-flow.js` — **off while building**                                                                                                                                                                                               |
+| Entry questions                 | `#sanvicEntry` (native `<dialog>`)                                                          | `entry-flow.js` — on for new devices; steps/answers/next actions in `site_settings.entry_flow_v2`, editable in Backoffice → Onboarding                                                                                              |
 
 `admin-studio.js` defines `window.openAdminPanel`, which **overrides** the
 function of the same name in `app-backoffice.js`. When changing how admin opens,
@@ -348,12 +348,12 @@ Skip, for now: `src/`, the shadcn primitives, the AST-ish checks in
 
 ## 8. Current state and known drift (2026-11-09)
 
-- **The first-visit questionnaire is OFF, and this is the only switch.** In
-  `public/site/entry-flow.js` the flag is `const ENTRY_QUESTIONS_ON = false;`
-  (line 11) and the flow declines to show whenever it is false. The rest is
-  intact: `openWhenReady()` still holds for `SANVIC_SPLASH_HOLD` and would mount
-  the card. **Flip the flag to `true` to bring the questions back**; nothing else
-  needs to change.
+- **The first-visit questionnaire is ON for new devices.** It opens as a native
+  `<dialog>` after `SANVIC_SPLASH_HOLD`. Steps, answer options and each answer's
+  `nextAction` are stored in `site_settings` under `entry_flow_v2`; the Backoffice
+  → Onboarding tab can add, edit and delete them without a deploy. The entered
+  name is saved on the device as the visitor identity via `personSave()` — no
+  login, email or account.
 - **No visitor login and no admin PIN anywhere.** The in-app Backoffice opens
   from three taps on the logo (or `?admin=1`) and has no passcode. The old React
   `/admin` page was deleted on 2026-11-09.

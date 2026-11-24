@@ -1942,6 +1942,9 @@ svg.lucide{vertical-align:-.15em}
         </div>
         <div class="admin-nav-group">
           <div class="admin-nav-heading">Site &amp; community</div>
+          <button type="button" class="admin-tab" data-tab="entry" id="adminTabEntry" aria-label="Onboarding questions" onclick="switchAdminTab('entry')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M5 10v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg><span class="admin-tab-label">Onboarding</span>
+          </button>
           <button type="button" class="admin-tab" data-tab="site" id="adminTabSite" aria-label="Site content" onclick="switchAdminTab('site')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20"/><path d="M12 2a15 15 0 0 0 0 20"/></svg><span class="admin-tab-label">Site content</span>
           </button>
@@ -2489,7 +2492,7 @@ svg.lucide{vertical-align:-.15em}
   // any JS file. Never trust a ?v= from the page URL — visitors arrive with
   // stale ?v= tokens (bookmarks, share links, published-site wrappers) that
   // pin browsers to old cached bundles, which is how mobile nav broke.
-  window.SANVIC_DEPLOY_VERSION = '2026-11-23-place-photo-strip-r1';
+  window.SANVIC_DEPLOY_VERSION = '2026-11-24-entry-onboarding-v1';
   // How long the SANVIC splash holds before the app (and the first-visit
   // questions) appear. Shared by the app scripts and entry-flow.js so the two
   // timers cannot drift apart. Raise it to hold the first page longer.
